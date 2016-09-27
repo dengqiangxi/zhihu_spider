@@ -1,3 +1,6 @@
+# Tutorial
+http://www.jianshu.com/p/986ee9456119
+
 # zhihu_spider
 a scrapy demo for crawl zhihu user relationship data &amp; download user head
 
