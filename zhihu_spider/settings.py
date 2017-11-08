@@ -60,10 +60,10 @@ ROBOTSTXT_OBEY = False
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#     'scrapy.pipelines.images.ImagesPipeline': 555
+#     'zhihu_spider.middlewares.ZhihuDownloaderMiddleware': 543,
 # }
 
-IMAGES_STORE = '/path/to/set/head/image'
+IMAGES_STORE = 'image'
 
 # Enable or disable extensions
 # See http://scrapy.readthedocs.org/en/latest/topics/extensions.html
@@ -74,8 +74,8 @@ IMAGES_STORE = '/path/to/set/head/image'
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
+    # 'zhihu_spider.pipelines.ZhihuImagePipeLine': 200,
     'zhihu_spider.pipelines.ZhihuSpiderPipeLine': 300,
-    'scrapy.contrib.pipeline.images.ImagesPipeline': 100
 }
 
 # Enable and configure the AutoThrottle extension (disabled by default)
@@ -108,6 +108,4 @@ ZHIHU_HEADER = {
     "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
     "Accept-Language": "zh-CN,zh;q=0.8",
 }
-ZHIHU_COOKIE = {
-  ##你的 cookie
-}
+
