@@ -100,3 +100,4 @@ ENV/
 .idea/
 zhihu_spider/misc/all_secret_set.py
 /re_utils.py
+/image
