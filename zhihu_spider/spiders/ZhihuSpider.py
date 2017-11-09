@@ -6,7 +6,6 @@ from scrapy.http import Request
 from zhihu_spider.settings import *
 from zhihu_spider.misc.all_secret_set import ZHIHU_COOKIE
 from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee,ZhihuFollower
-from zhihu_spider.misc.tools import getId
 import re, json
 
 
