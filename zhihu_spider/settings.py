@@ -74,7 +74,7 @@ IMAGES_STORE = 'image'
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    # 'zhihu_spider.pipelines.ZhihuImagePipeLine': 200,
+    'zhihu_spider.pipelines.ZhihuImagePipeLine': 200,
     'zhihu_spider.pipelines.ZhihuSpiderPipeLine': 300,
 }
 
