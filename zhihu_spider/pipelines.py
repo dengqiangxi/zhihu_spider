@@ -4,9 +4,6 @@
 #
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
-
-
-import pymongo
 from .misc.all_secret_set import mysql_config
 import random
 from .misc.user_agents import user_agent_list
@@ -88,7 +85,8 @@ class ZhihuSpiderPipeLine(object):
             is_advertiser = 1 if item['is_advertiser'] else 0
             is_org = 1 if item['is_org'] else 0
 
-            avatar_local_url =  item['avatar_local_url'] if item['avatar_local_url'] else '-'
+            # avatar_local_url =  item['avatar_local_url'] if item['avatar_local_url'] else '-'
+            avatar_local_url =  '-'
             sql_insert_user = 'INSERT INTO zh_userinfo (nametoken, name, gender, avatar_url, main_page_url,headline,is_advertiser,user_type,is_org,avatar_local_url) VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s") ' % (
                 nametoken, item['name'], item['gender'], item['avatar_url'], item['main_page_url'],item['headline'],is_advertiser,item['user_type'],is_org,avatar_local_url)
             print(sql_insert_user)
