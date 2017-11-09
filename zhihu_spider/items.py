@@ -13,7 +13,7 @@ class ZhihuSpiderItem(scrapy.Item):
     gender = scrapy.Field()  # 用户性别
     followees = scrapy.Field()  # 用户粉丝
     followers = scrapy.Field()  # 用户关注的人
-    # headline = scrapy.Field()  # 简介
+    headline = scrapy.Field()  # 简介
     detail_introduce = scrapy.Field()  # 用户详细介绍
     location = scrapy.Field()  # 住址
     major = scrapy.Field()  # 主修
@@ -23,20 +23,33 @@ class ZhihuSpiderItem(scrapy.Item):
     avatar_url = scrapy.Field()  # 头像url
     main_page_url = scrapy.Field()  # 主页
     avatar_local_url = scrapy.Field()  # 本机位置
-    id = scrapy.Field()
+    nametoken = scrapy.Field()
     images = scrapy.Field()
 
 
 class ZhihuFollowee(scrapy.Item):
-    follow_id = scrapy.Field() #表示谁关注的
-    id = scrapy.Field()  # uid
+    ftoken = scrapy.Field() #表示谁关注的
     gender = scrapy.Field()  # 性别
     name = scrapy.Field()  # 用户名
-    url_token = scrapy.Field()  # 用户地址末段链接
+    nametoken = scrapy.Field()  # 用户地址末段链接
     user_type = scrapy.Field()  # 用户类型
     is_advertiser = scrapy.Field()  # 是否是广告者
     avatar_url = scrapy.Field()  # 用户头像url
     is_org = scrapy.Field() #是否是组织
-    # headline = scrapy.Field() # 简介
+    headline = scrapy.Field() # 简介
+    avatar_local_url = scrapy.Field()  # 本机位置
+    main_page_url=scrapy.Field() # 主页URL
+
+
+class ZhihuFollower(scrapy.Item):
+    ftoken = scrapy.Field() #表示谁关注的
+    gender = scrapy.Field()  # 性别
+    name = scrapy.Field()  # 用户名
+    nametoken = scrapy.Field()  # 用户地址末段链接
+    user_type = scrapy.Field()  # 用户类型
+    is_advertiser = scrapy.Field()  # 是否是广告者
+    avatar_url = scrapy.Field()  # 用户头像url
+    is_org = scrapy.Field() #是否是组织
+    headline = scrapy.Field() # 简介
     avatar_local_url = scrapy.Field()  # 本机位置
     main_page_url=scrapy.Field() # 主页URL

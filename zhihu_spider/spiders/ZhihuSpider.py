@@ -5,7 +5,7 @@ import scrapy
 from scrapy.http import Request
 from zhihu_spider.settings import *
 from zhihu_spider.misc.all_secret_set import ZHIHU_COOKIE
-from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee
+from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee,ZhihuFollower
 from zhihu_spider.misc.tools import getId
 import re, json
 
@@ -53,8 +53,8 @@ class ZhihuSpider(scrapy.Spider):
                 # if thanks_support:
                 #     for t in thanks_support:
                 # print(t)
-
-        # item['headline'] = response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
+        headline =response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
+        item['headline'] = headline.replace('"',"'")  if headline else "None"
         item['detail_introduce'] = ''.join(response.css(
             ' div[class="RichText ProfileHeader-detailValue"]::text').extract())
 
@@ -74,59 +74,73 @@ class ZhihuSpider(scrapy.Spider):
         item['articles'] = int(
             response.css('li[aria-controls="Profile-posts"]>a>span[class="Tabs-meta"]::text').extract_first())
 
-        item['id'] = getId(response.url)
-        # print(item)
+        item['nametoken'] = response.url.split('/')[-1]
 
 
         url = response.css(
             'div[class="Card FollowshipCard"]>div>a[class="Button NumberBoard-item Button--plain"]::attr(href)').extract_first()
         yield item
+        # print(item)
         if url:
             url = self.base_url + url
             yield scrapy.Request(url=url, callback=self.parse_followers, headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE,
                                  meta={
-                                     'uid': item['id']
+                                     'nametoken': item['nametoken']
                                  })
 
     def parse_followers(self, response):
-        uid = response.meta['uid']
-        api_url = self.base_url + '/api/v4/members/' + response.url.split('/')[-2] + '/followees'
+        nametoken = response.meta['nametoken']
+        api_followees_url = self.base_url + '/api/v4/members/' + response.url.split('/')[-2] + '/followees'
+        api_followers_url = self.base_url + '/api/v4/members/' + response.url.split('/')[-2] + '/followers'
 
-        yield scrapy.Request(url=api_url, callback=self.parser_follower_json, headers=ZHIHU_HEADER,
-                             cookies=ZHIHU_COOKIE, dont_filter=True, meta={
-                'uid': uid
+        yield scrapy.Request(url=api_followees_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
+                             cookies=ZHIHU_COOKIE, meta={
+                'nametoken': nametoken
             })
-    # 解析json
-    def parser_follower_json(self, response):
-        follow_id = response.meta['uid']
-        json_text = response.text
-        followees_obj = json.loads(json_text)
-        paging = followees_obj['paging']
-        data = followees_obj['data']
+        yield scrapy.Request(url=api_followers_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
+                             cookies=ZHIHU_COOKIE, meta={
+                'nametoken': nametoken
+            })
 
+
+
+
+    # 解析json
+    def parser_follow_json(self, response):
+        nametoken = response.meta['nametoken']
+        json_text = response.text
+        print(json_text)
+        f_obj = json.loads(json_text)
+        paging = f_obj['paging']
+        data = f_obj['data']
+        print('23333',response.url.find('followers'))
+        item={}
+        if response.url.find('followers')>0:
+            item =ZhihuFollower()
+        elif response.url.find('followees')>0:
+            item=ZhihuFollowee()
         if data:
             for userinfo in data:
-                followee_item = ZhihuFollowee()
-
                 user_url = self.base_url + '/people/' + userinfo['url_token']  # 拼接成用户个人网址
-                followee_item['follow_id'] = follow_id
-                followee_item['id'] = getId(user_url)
-                followee_item['gender'] = userinfo['gender']
-                followee_item['name'] = userinfo['name']
-                followee_item['url_token'] = userinfo['url_token']
-                followee_item['user_type'] = userinfo['user_type']
-                followee_item['is_advertiser'] = userinfo['is_advertiser']
-                followee_item['avatar_url'] = userinfo['avatar_url']
-                followee_item['is_org'] = userinfo['is_org']
-                # followee_item['headline'] = userinfo['headline'][:60]
-                followee_item['main_page_url'] = user_url
-                yield followee_item
-
+                item['ftoken'] = nametoken
+                item['gender'] = userinfo['gender']
+                item['name'] = userinfo['name']
+                item['nametoken'] = userinfo['url_token']
+                item['user_type'] = userinfo['user_type']
+                item['is_advertiser'] = userinfo['is_advertiser']
+                item['avatar_url'] = userinfo['avatar_url']
+                item['is_org'] = userinfo['is_org']
+                head_line = userinfo['headline']
+                item['headline'] = head_line.replace('"', "'") if head_line else 'None'
+                item['main_page_url'] = user_url
+                yield item
                 yield scrapy.Request(url=user_url, callback=self.parse, headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE)
 
         if paging and not paging['is_end']:
             next_url = paging['next'].replace('http://', 'https://')
-            yield scrapy.Request(url=next_url, callback=self.parser_follower_json, headers=ZHIHU_HEADER,
+            yield scrapy.Request(url=next_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
                                  cookies=ZHIHU_COOKIE, dont_filter=True, meta={
-                    'uid': follow_id
+                    'nametoken': nametoken
                 })
+
+
