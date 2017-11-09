@@ -5,29 +5,27 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 from .misc.all_secret_set import mysql_config
-import random
-from .misc.user_agents import user_agent_list
 import pymysql
 from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee,ZhihuFollower
 from scrapy.exceptions import DropItem
-from scrapy.pipelines.images import ImagesPipeline, FileException
-from scrapy.http import Request
+# from scrapy.pipelines.images import ImagesPipeline, FileException
+# from scrapy.http import Request
 
-
-class ZhihuImagePipeLine(ImagesPipeline):
-    def get_media_requests(self, item, info):
-        print('下载图片',item['avatar_url'])
-        yield Request(url=item['avatar_url'], headers={
-            "Referer": item['main_page_url'],
-            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
-        })
-
-    def item_completed(self, results, item, info):
-        # print(results)
-        if results and results[0] and results[0][0]:
-            item['avatar_local_url'] = results[0][1]['path']
-        # print(item)
-        return item
+#
+# class ZhihuImagePipeLine(ImagesPipeline):
+#     def get_media_requests(self, item, info):
+#         print('下载图片',item['avatar_url'])
+#         yield Request(url=item['avatar_url'], headers={
+#             "Referer": item['main_page_url'],
+#             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
+#         })
+#
+#     def item_completed(self, results, item, info):
+#         # print(results)
+#         if results and results[0] and results[0][0]:
+#             item['avatar_local_url'] = results[0][1]['path']
+#         # print(item)
+#         return item
 
 
 class ZhihuSpiderPipeLine(object):
