@@ -5,9 +5,8 @@
 # Don't forget to add your pipeline to the ITEM_PIPELINES setting
 # See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 from .misc.all_secret_set import mysql_config
-import random
-from .misc.user_agents import user_agent_list
 import pymysql
+import logging
 from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee,ZhihuFollower
 from scrapy.exceptions import DropItem
 from scrapy.pipelines.images import ImagesPipeline, FileException
@@ -16,7 +15,8 @@ from scrapy.http import Request
 
 class ZhihuImagePipeLine(ImagesPipeline):
     def get_media_requests(self, item, info):
-        print('下载图片',item['avatar_url'])
+        # print('下载图片',item['avatar_url'])
+
         yield Request(url=item['avatar_url'], headers={
             "Referer": item['main_page_url'],
             'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
@@ -39,16 +39,14 @@ class ZhihuSpiderPipeLine(object):
         if isinstance(item, ZhihuSpiderItem):
             self.saveOrUpdateUserInfo(item)
         elif isinstance(item, ZhihuFollowee):
-            print('ZhihuFollowee+1')
             self.saveOrUpdateFollow(item,'followee')
         elif isinstance(item, ZhihuFollower):
-            print('ZhihuFollower+1')
             self.saveOrUpdateFollow(item,'follower')
 
     def saveOrUpdateUserInfo(self, item):
-        # try:
+        try:
             nametoken = item['nametoken']
-            avatar_local_url = item['avatar_local_url'] if item['avatar_local_url'] else '-'
+            avatar_local_url = item['avatar_local_url'] if 'avatar_local_url' in item else '-'
             sql_select_id = 'SELECT nametoken FROM zh_userinfo WHERE nametoken="' + nametoken + '"'
             sql_insert_content = 'INSERT INTO zh_userinfo (nametoken, name, followees, followers,headline, detail_introduce, major, ask, answer, articles, avatar_url, main_page_url,avatar_local_url) VALUES("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s")' \
                                  % (
@@ -64,16 +62,17 @@ class ZhihuSpiderPipeLine(object):
             self.cursor.execute(sql_select_id)
             # print(user_select)
             if not self.cursor.fetchone():
-                print('sql_insert_content', sql_insert_content)
+                # print('sql_insert_content', sql_insert_content)
                 self.cursor.execute(sql_insert_content)
             else:
-                print('sql_update_content', sql_update_content)
+                # print('sql_update_content', sql_update_content)
                 self.cursor.execute(sql_update_content)
             self.connection.commit()
             return item
-        # except:
-        #     self.connection.rollback()
-        #     raise DropItem('重复喽')
+        except Exception as e:
+            logging.error(e)
+            self.connection.rollback()
+            raise DropItem('重复喽')
 
     def saveOrUpdateFollow(self, item,dbname):
         try:
@@ -87,9 +86,9 @@ class ZhihuSpiderPipeLine(object):
 
             # avatar_local_url =  item['avatar_local_url'] if item['avatar_local_url'] else '-'
             avatar_local_url =  '-'
-            sql_insert_user = 'INSERT INTO zh_userinfo (nametoken, name, gender, avatar_url, main_page_url,headline,is_advertiser,user_type,is_org,avatar_local_url) VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s") ' % (
-                nametoken, item['name'], item['gender'], item['avatar_url'], item['main_page_url'],item['headline'],is_advertiser,item['user_type'],is_org,avatar_local_url)
-            print(sql_insert_user)
+            sql_insert_user = 'INSERT INTO zh_userinfo (nametoken, name, gender, avatar_url, main_page_url,headline,is_advertiser,user_type,is_org) VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s") ' % (
+                nametoken, item['name'], item['gender'], item['avatar_url'], item['main_page_url'],item['headline'],is_advertiser,item['user_type'],is_org)
+            # print(sql_insert_user)
             self.cursor.execute(sql_selector_user)
             if not self.cursor.fetchall():
                 self.cursor.execute(sql_insert_user)
@@ -97,12 +96,13 @@ class ZhihuSpiderPipeLine(object):
             sql_insert_friends = 'INSERT INTO zh_%s (usertoken, %stoken,%sname) VALUES ("%s","%s","%s")' % (dbname,dbname,dbname,ftoken, nametoken,item['name'])
             self.cursor.execute(sql_select_fid)
             p = self.cursor.fetchall()
-            print('获取all',p)
+            # print('获取all',p)
             if not p:
                 print('sql_insert_friends',sql_insert_friends)
                 self.cursor.execute(sql_insert_friends)
             self.connection.commit()
             return item
-        except:
+        except Exception as e:
+            logging.error(e)
             self.connection.rollback()
             raise DropItem('重复喽')

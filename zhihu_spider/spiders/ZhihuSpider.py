@@ -108,11 +108,11 @@ class ZhihuSpider(scrapy.Spider):
     def parser_follow_json(self, response):
         nametoken = response.meta['nametoken']
         json_text = response.text
-        print(json_text)
+        # print(json_text)
         f_obj = json.loads(json_text)
         paging = f_obj['paging']
         data = f_obj['data']
-        print('23333',response.url.find('followers'))
+        # print('23333',response.url.find('followers'))
         item={}
         if response.url.find('followers')>0:
             item =ZhihuFollower()
