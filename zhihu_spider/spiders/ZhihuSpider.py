@@ -42,9 +42,9 @@ class ZhihuSpider(scrapy.Spider):
 
         if follow:
             if follow[0]:
-                item['followees'] = int(follow[0])
+                item['followees'] = int(follow[0].replace(',',''))
             if follow[1]:
-                item['followers'] = int(follow[1])
+                item['followers'] = int(follow[1].replace(',',''))
         headline = response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
         item['headline'] = headline.replace('"', "'") if headline else "None"
         item['detail_introduce'] = ''.join(response.css(
