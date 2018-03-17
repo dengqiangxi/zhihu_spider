@@ -38,7 +38,7 @@ class ZhihuSpider(scrapy.Spider):
         if user_name:
             item['name'] = user_name
         follow = response.css(
-            'div[class="Card FollowshipCard"]>div>a>div[class="NumberBoard-value"]::text').extract()
+            'div[class="Card FollowshipCard"]>div>a strong[class="NumberBoard-itemValue"]::text').extract()
 
         if follow:
             if follow[0]:
@@ -72,7 +72,7 @@ class ZhihuSpider(scrapy.Spider):
         url = response.css(
             'div[class="Card FollowshipCard"]>div>a[class="Button NumberBoard-item Button--plain"]::attr(href)').extract_first()
         yield item
-        # print(item)
+        print(item)
         if url:
             url = self.base_url + url
             yield scrapy.Request(url=url, callback=self.parse_followers, headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE,
@@ -124,6 +124,7 @@ class ZhihuSpider(scrapy.Spider):
                 item['headline'] = head_line.replace('"', "'") if head_line else 'None'
                 item['main_page_url'] = user_url
                 yield item
+                # print(item)
                 yield scrapy.Request(url=user_url, callback=self.parse, headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE)
 
         if paging and not paging['is_end']:

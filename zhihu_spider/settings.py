@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-# Scrapy settings for zhihu_spider project
+# Scrapy settings for spiders project
 #
 # For simplicity, this file contains only settings considered important or
 # commonly used. You can find more settings consulting the documentation:
@@ -60,7 +60,7 @@ ROBOTSTXT_OBEY = False
 # Enable or disable downloader middlewares
 # See http://scrapy.readthedocs.org/en/latest/topics/downloader-middleware.html
 # DOWNLOADER_MIDDLEWARES = {
-#     'zhihu_spider.middlewares.ZhihuDownloaderMiddleware': 543,
+#     'spiders.middlewares.ZhihuDownloaderMiddleware': 543,
 # }
 
 IMAGES_STORE = 'image'
@@ -74,7 +74,7 @@ IMAGES_STORE = 'image'
 # Configure item pipelines
 # See http://scrapy.readthedocs.org/en/latest/topics/item-pipeline.html
 ITEM_PIPELINES = {
-    # 'zhihu_spider.pipelines.ZhihuImagePipeLine': 200,
+    # 'spiders.pipelines.ZhihuImagePipeLine': 200,
     'zhihu_spider.pipelines.ZhihuSpiderPipeLine': 300,
 }
 

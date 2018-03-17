@@ -11,6 +11,5 @@ mysql_config = {
 }
 
 ZHIHU_COOKIE = {
-  ##你的 cookie
-"xxxx":"xxxxx"
+  #你的 cookie key:value
 }
