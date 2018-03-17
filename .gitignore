@@ -98,6 +98,6 @@ ENV/
 .DS_Store
 .deploy*/
 .idea/
-/re_utils.py
-/image
-/NumberThreads.py
+re_utils.py
+image
+NumberThreads.py
