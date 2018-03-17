@@ -5,7 +5,7 @@
 #### 使用方式
  1. 安装MySQL 教程不在此赘述，新建数据库并将 zhihu.sql建表文件导入数据库 并在 all_secret_set.py中配置好数据库相关项
  2. 安装scrapy以及相关依赖 `pip install -r requirements.txt`
- 3. 将zhihu账号cookie拷贝出来粘贴到zhihu_spider/misc/cookie 中
+ 3. 将zhihu账号cookie拷贝出来粘贴到根目录下cookie文件中（新建文件）
  4. 运行main.py
 
 
