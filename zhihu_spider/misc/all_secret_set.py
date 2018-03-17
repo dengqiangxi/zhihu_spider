@@ -13,7 +13,6 @@ cookies = {}
 
 def get_zhihu_cookie():
     if cookies:
-        print("----")
         return cookies
     f = open("cookie", "rb")
     cookie = f.read().decode("utf-8")
