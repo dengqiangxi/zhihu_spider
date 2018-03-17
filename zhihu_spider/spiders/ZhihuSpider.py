@@ -56,7 +56,7 @@ class ZhihuSpider(scrapy.Spider):
 
         head_img_url = response.css('img[class="Avatar Avatar--large UserAvatar-inner"]::attr(src)').extract_first()
 
-        item['avatar_url'] = head_img_url
+        item['avatar_url'] = head_img_url.replace('_is.jpg','jpg')
         item['ask'] = int(
             response.css('li[aria-controls="Profile-asks"]>a>span[class="Tabs-meta"]::text').extract_first())
 
