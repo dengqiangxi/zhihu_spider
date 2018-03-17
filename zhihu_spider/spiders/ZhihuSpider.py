@@ -30,7 +30,6 @@ class ZhihuSpider(scrapy.Spider):
 
     def parse(self, response):
         item = ZhihuSpiderItem()
-        # item = {}
         user_name = response.css('span[class="ProfileHeader-name"]::text').extract_first()
 
         if response.url:
@@ -46,12 +45,6 @@ class ZhihuSpider(scrapy.Spider):
                 item['followees'] = int(follow[0])
             if follow[1]:
                 item['followers'] = int(follow[1])
-
-                # thanks_support = response.css('div[class="IconGraf"] div[class="IconGraf-iconWrapper"]::text').extract()
-
-                # if thanks_support:
-                #     for t in thanks_support:
-                # print(t)
         headline =response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
         item['headline'] = headline.replace('"',"'")  if headline else "None"
         item['detail_introduce'] = ''.join(response.css(
@@ -108,11 +101,9 @@ class ZhihuSpider(scrapy.Spider):
     def parser_follow_json(self, response):
         nametoken = response.meta['nametoken']
         json_text = response.text
-        # print(json_text)
         f_obj = json.loads(json_text)
         paging = f_obj['paging']
         data = f_obj['data']
-        # print('23333',response.url.find('followers'))
         item={}
         if response.url.find('followers')>0:
             item =ZhihuFollower()
