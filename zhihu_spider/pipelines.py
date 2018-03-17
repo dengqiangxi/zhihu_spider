@@ -2,8 +2,6 @@
 
 # Define your item pipelines here
 #
-# Don't forget to add your pipeline to the ITEM_PIPELINES setting
-# See: http://doc.scrapy.org/en/latest/topics/item-pipeline.html
 from .misc.all_secret_set import mysql_config
 import pymysql
 import logging
@@ -60,12 +58,9 @@ class ZhihuSpiderPipeLine(object):
                 item['articles'], nametoken
             )
             self.cursor.execute(sql_select_id)
-            # print(user_select)
             if not self.cursor.fetchone():
-                # print('sql_insert_content', sql_insert_content)
                 self.cursor.execute(sql_insert_content)
             else:
-                # print('sql_update_content', sql_update_content)
                 self.cursor.execute(sql_update_content)
             self.connection.commit()
             return item
@@ -79,16 +74,12 @@ class ZhihuSpiderPipeLine(object):
             ftoken = item['ftoken']
             nametoken = item['nametoken']
             sql_selector_user = 'SELECT nametoken FROM zh_userinfo WHERE nametoken="%s"' % (nametoken)
-            # sql_insert_user = 'INSERT INTO zh_friend (uid, fid, name) VALUES ("%s","%s","%s") ON DUPLICATE '
 
             is_advertiser = 1 if item['is_advertiser'] else 0
             is_org = 1 if item['is_org'] else 0
 
-            # avatar_local_url =  item['avatar_local_url'] if item['avatar_local_url'] else '-'
-            avatar_local_url =  '-'
             sql_insert_user = 'INSERT INTO zh_userinfo (nametoken, name, gender, avatar_url, main_page_url,headline,is_advertiser,user_type,is_org) VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s") ' % (
                 nametoken, item['name'], item['gender'], item['avatar_url'], item['main_page_url'],item['headline'],is_advertiser,item['user_type'],is_org)
-            # print(sql_insert_user)
             self.cursor.execute(sql_selector_user)
             if not self.cursor.fetchall():
                 self.cursor.execute(sql_insert_user)
@@ -96,7 +87,6 @@ class ZhihuSpiderPipeLine(object):
             sql_insert_friends = 'INSERT INTO zh_%s (usertoken, %stoken,%sname) VALUES ("%s","%s","%s")' % (dbname,dbname,dbname,ftoken, nametoken,item['name'])
             self.cursor.execute(sql_select_fid)
             p = self.cursor.fetchall()
-            # print('获取all',p)
             if not p:
                 print('sql_insert_friends',sql_insert_friends)
                 self.cursor.execute(sql_insert_friends)

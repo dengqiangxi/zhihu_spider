@@ -101,3 +101,4 @@ ENV/
 re_utils.py
 image
 NumberThreads.py
+zhihu_spider/misc/cookie

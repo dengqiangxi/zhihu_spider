@@ -4,8 +4,8 @@
 import scrapy
 from scrapy.http import Request
 from zhihu_spider.settings import *
-from zhihu_spider.misc.all_secret_set import ZHIHU_COOKIE
-from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee,ZhihuFollower
+from zhihu_spider.misc.all_secret_set import get_zhihu_cookie
+from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee, ZhihuFollower
 import re, json
 
 
@@ -26,7 +26,7 @@ class ZhihuSpider(scrapy.Spider):
             yield self.make_requests_from_url(url)
 
     def make_requests_from_url(self, url):
-        return Request(url, method='GET', headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE)
+        return Request(url, method='GET', headers=ZHIHU_HEADER, cookies=get_zhihu_cookie())
 
     def parse(self, response):
         item = ZhihuSpiderItem()
@@ -45,8 +45,8 @@ class ZhihuSpider(scrapy.Spider):
                 item['followees'] = int(follow[0])
             if follow[1]:
                 item['followers'] = int(follow[1])
-        headline =response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
-        item['headline'] = headline.replace('"',"'")  if headline else "None"
+        headline = response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
+        item['headline'] = headline.replace('"', "'") if headline else "None"
         item['detail_introduce'] = ''.join(response.css(
             ' div[class="RichText ProfileHeader-detailValue"]::text').extract())
 
@@ -68,14 +68,13 @@ class ZhihuSpider(scrapy.Spider):
 
         item['nametoken'] = response.url.split('/')[-1]
 
-
         url = response.css(
             'div[class="Card FollowshipCard"]>div>a[class="Button NumberBoard-item Button--plain"]::attr(href)').extract_first()
         yield item
         print(item)
         if url:
             url = self.base_url + url
-            yield scrapy.Request(url=url, callback=self.parse_followers, headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE,
+            yield scrapy.Request(url=url, callback=self.parse_followers, headers=ZHIHU_HEADER, cookies=get_zhihu_cookie(),
                                  meta={
                                      'nametoken': item['nametoken']
                                  })
@@ -86,16 +85,13 @@ class ZhihuSpider(scrapy.Spider):
         api_followers_url = self.base_url + '/api/v4/members/' + response.url.split('/')[-2] + '/followers'
 
         yield scrapy.Request(url=api_followees_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
-                             cookies=ZHIHU_COOKIE, meta={
+                             cookies=get_zhihu_cookie(), meta={
                 'nametoken': nametoken
             })
         yield scrapy.Request(url=api_followers_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
-                             cookies=ZHIHU_COOKIE, meta={
+                             cookies=get_zhihu_cookie(), meta={
                 'nametoken': nametoken
             })
-
-
-
 
     # 解析json
     def parser_follow_json(self, response):
@@ -104,11 +100,11 @@ class ZhihuSpider(scrapy.Spider):
         f_obj = json.loads(json_text)
         paging = f_obj['paging']
         data = f_obj['data']
-        item={}
-        if response.url.find('followers')>0:
-            item =ZhihuFollower()
-        elif response.url.find('followees')>0:
-            item=ZhihuFollowee()
+        item = {}
+        if response.url.find('followers') > 0:
+            item = ZhihuFollower()
+        elif response.url.find('followees') > 0:
+            item = ZhihuFollowee()
         if data:
             for userinfo in data:
                 user_url = self.base_url + '/people/' + userinfo['url_token']  # 拼接成用户个人网址
@@ -125,13 +121,11 @@ class ZhihuSpider(scrapy.Spider):
                 item['main_page_url'] = user_url
                 yield item
                 # print(item)
-                yield scrapy.Request(url=user_url, callback=self.parse, headers=ZHIHU_HEADER, cookies=ZHIHU_COOKIE)
+                yield scrapy.Request(url=user_url, callback=self.parse, headers=ZHIHU_HEADER, cookies=get_zhihu_cookie())
 
         if paging and not paging['is_end']:
             next_url = paging['next'].replace('http://', 'https://')
             yield scrapy.Request(url=next_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
-                                 cookies=ZHIHU_COOKIE, dont_filter=True, meta={
+                                 cookies=get_zhihu_cookie(), dont_filter=True, meta={
                     'nametoken': nametoken
                 })
-
-
