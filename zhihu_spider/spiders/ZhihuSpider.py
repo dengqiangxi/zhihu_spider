@@ -1,131 +1,191 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 # Created by dengqiangxi on 16/9/12
+import logging
+
 import scrapy
-from scrapy.http import Request
+from scrapy.http import Request, Response
 from zhihu_spider.settings import *
-from zhihu_spider.misc.all_secret_set import get_zhihu_cookie
-from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee, ZhihuFollower
-import re, json
+from zhihu_spider.items import *
+from zhihu_spider.misc.db_tools import *
+import json
+
+from zhihu_spider.misc.tools import config_logger
+
+config_logger()
+
+ignore_key_set = {'isFollowed', 'vipInfo', 'accountStatus', 'messageThreadToken', 'isFollowing', 'orgHomepage',
+                  'industryCategory'}
+
+
+def parse_sub_item(sub_item_obj: dict, sub_item: Item):
+    for sub_key, sub_value in sub_item_obj.items():
+        if sub_key in Employment.fields.keys():
+            if sub_key == 'meta':
+                sub_item[sub_key] = json.dumps(sub_value, ensure_ascii=False)
+            else:
+                sub_item[sub_key] = sub_value
 
 
 class ZhihuSpider(scrapy.Spider):
     name = 'zhihu'
-
-    start_urls = ['https://www.zhihu.com/people/chi-chu-63']
-    allowed_domains = ['www.zhihu.com']
+    type_format_str = '''https://www.zhihu.com/api/v4/members/{}/{}?limit=20&offset=100'''
+    # type_format_str = '''https://www.zhihu.com/api/v4/members/{}/{}?include=data%5B*%5D.answer_count%2Carticles_count%2Cgender%2Cfollower_count%2Cis_followed%2Cis_following%2Cbadge%5B%3F(type%3Dbest_answerer)%5D.topics&limit=20&offset=0'''
+    url_user_info_api_format = 'https://api.zhihu.com/people/{}'
+    start_urls = [
+        url_user_info_api_format.format('0970f947b898ecc0ec035f9126dd4e08'),
+        url_user_info_api_format.format('80d73b7ec52adc8afd54894cead6063f'),
+        url_user_info_api_format.format('8b68876001197b3b9cd605b20814616f'),
+    ]
 
     def __init__(self, **kwargs):
         super(ZhihuSpider, self).__init__(**kwargs)
         self.base_url = 'https://www.zhihu.com'
-        self.followees_url = 'https://www.zhihu.com/people/renfish/following'
-        self.re_views = re.compile('\d*')
+        self.following_url = 'https://www.zhihu.com/people/renfish/following'
 
     def start_requests(self):
         for url in self.start_urls:
             yield self.make_requests_from_url(url)
 
     def make_requests_from_url(self, url):
-        return Request(url, method='GET', headers=ZHIHU_HEADER, cookies=get_zhihu_cookie())
+        return Request(url, method='GET', headers=ZHIHU_HEADER)
 
-    def parse(self, response):
-        item = ZhihuSpiderItem()
-        user_name = response.css('span[class="ProfileHeader-name"]::text').extract_first()
+    def parse(self, response: Response):
+        """
+        解析单个用户的详细信息
+        :param response:
+        """
+        text = response.text
+        user_info = json.loads(text)
+        raw_data_obj = RawDataItem()
+        raw_data_obj['json_obj'] = user_info
+        yield raw_data_obj
+        item = UserInfo()
+        for key, value in user_info.items():
+            if key in ignore_key_set:
+                continue
+            if key == 'vipInfo':
+                item['isVip'] = value.get('isVip')
+            elif key == 'education':
+                edu_names = []
+                for e_item in value:
+                    if not e_item:
+                        continue
+                    education_item = Education()
+                    parse_sub_item(e_item, education_item)
+                    if education_item['name'] not in db_education_names:
+                        db_education_names.add(education_item['name'])
+                        yield education_item
+                    edu_names.append(e_item['name'])
+                item[key] = json.dumps(edu_names, ensure_ascii=False)
+            elif key == 'employment':
+                all_employ_names = []
+                for e_item in value:
+                    employ_names = []
+                    for e_sub_item in e_item:
+                        if not e_sub_item:
+                            continue
+                        employ_item = Employment()
+                        parse_sub_item(e_sub_item, employ_item)
+                        if employ_item['name'] not in db_employ_names:
+                            db_employ_names.add(employ_item['name'])
+                            yield employ_item
+                        employ_names.append(e_sub_item['name'])
+                    all_employ_names.append(employ_names)
 
-        if response.url:
-            item['main_page_url'] = response.url
-
-        if user_name:
-            item['name'] = user_name
-        follow = response.css(
-            'div[class="Card FollowshipCard"]>div>a strong[class="NumberBoard-itemValue"]::text').extract()
-
-        if follow:
-            if follow[0]:
-                item['followees'] = int(follow[0].replace(',',''))
-            if follow[1]:
-                item['followers'] = int(follow[1].replace(',',''))
-        headline = response.css('span[class="RichText ProfileHeader-headline"]::text').extract_first()
-        item['headline'] = headline.replace('"', "'") if headline else "None"
-        item['detail_introduce'] = ''.join(response.css(
-            ' div[class="RichText ProfileHeader-detailValue"]::text').extract())
-
-        item['location'] = ''.join(response.css('.location .topic-link::text').extract())
-
-        item['major'] = response.css('div[class="ProfileHeader-infoItem"]::text').extract_first()
-
-        head_img_url = response.css('img[class="Avatar Avatar--large UserAvatar-inner"]::attr(src)').extract_first()
-
-        item['avatar_url'] = head_img_url.replace('_is.jpg','jpg')
-        item['ask'] = int(
-            response.css('li[aria-controls="Profile-asks"]>a>span[class="Tabs-meta"]::text').extract_first())
-
-        item['answer'] = int(
-            response.css('li[aria-controls="Profile-answers"]>a>span[class="Tabs-meta"]::text').extract_first())
-
-        item['articles'] = int(
-            response.css('li[aria-controls="Profile-posts"]>a>span[class="Tabs-meta"]::text').extract_first())
-
-        item['nametoken'] = response.url.split('/')[-1]
-
-        url = response.css(
-            'div[class="Card FollowshipCard"]>div>a[class="Button NumberBoard-item Button--plain"]::attr(href)').extract_first()
+                item[key] = json.dumps(all_employ_names, ensure_ascii=False)
+            elif key == 'location':
+                location_names = []
+                for l_item in value:
+                    if not l_item:
+                        continue
+                    location = Location()
+                    parse_sub_item(l_item, location)
+                    l_name = l_item.get('name')
+                    location_names.append(l_name)
+                    if l_name not in db_location_names:
+                        db_location_names.add(l_name)
+                        yield location
+                item[key] = json.dumps(location_names, ensure_ascii=False)
+            elif key == 'business':
+                business_item = Business()
+                if not value:
+                    continue
+                parse_sub_item(value, business_item)
+                b_name = value.get('name')
+                item[key] = b_name
+                if b_name not in db_business_names:
+                    db_business_names.add(b_name)
+                    yield business_item
+            elif key == 'badge':
+                badge_items = []
+                for badge_item in value:
+                    topics = badge_item.get('topics')
+                    if topics:
+                        topic_names = []
+                        for topic_item in topics:
+                            if not topic_item:
+                                continue
+                            topic = Topic()
+                            parse_sub_item(topic_item, topic)
+                            topic_names.append(topic_item.get('name'))
+                            if topic['name'] not in db_topic_names:
+                                db_topic_names.add(topic['name'])
+                                yield topic
+                        del badge_item['topics']
+                        badge_item['topic_names'] = topic_names
+                    badge_items.append(badge_item)
+                item[key] = json.dumps(badge_items, ensure_ascii=False)
+            elif key == 'infinity':
+                item[key] = json.dumps(value, ensure_ascii=Field)
+            else:
+                if key in UserInfo.fields.keys():
+                    item[key] = value
+        db_user_ids.add(item['id'])
         yield item
-        print(item)
-        if url:
-            url = self.base_url + url
-            yield scrapy.Request(url=url, callback=self.parse_followers, headers=ZHIHU_HEADER, cookies=get_zhihu_cookie(),
-                                 meta={
-                                     'nametoken': item['nametoken']
-                                 })
+        url_token = item['url_token']
+        api_followings_url = self.type_format_str.format(url_token, 'followees')
+        api_followers_url = self.type_format_str.format(url_token, 'followers')
 
-    def parse_followers(self, response):
-        nametoken = response.meta['nametoken']
-        api_followees_url = self.base_url + '/api/v4/members/' + response.url.split('/')[-2] + '/followees'
-        api_followers_url = self.base_url + '/api/v4/members/' + response.url.split('/')[-2] + '/followers'
-
-        yield scrapy.Request(url=api_followees_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
-                             cookies=get_zhihu_cookie(), meta={
-                'nametoken': nametoken
-            })
+        yield scrapy.Request(url=api_followings_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
+                             meta={'url_token': url_token})
         yield scrapy.Request(url=api_followers_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
-                             cookies=get_zhihu_cookie(), meta={
-                'nametoken': nametoken
-            })
+                             meta={'url_token': url_token})
 
-    # 解析json
     def parser_follow_json(self, response):
-        nametoken = response.meta['nametoken']
+        """
+        从粉丝和关注者的接口中抽出用户的token
+        """
+        url_token = response.meta['url_token']
         json_text = response.text
         f_obj = json.loads(json_text)
         paging = f_obj['paging']
         data = f_obj['data']
         item = {}
-        if response.url.find('followers') > 0:
-            item = ZhihuFollower()
-        elif response.url.find('followees') > 0:
-            item = ZhihuFollowee()
+        if 'followers' in response.url:
+            item = Follower()
+        elif 'followees' in response.url or 'following' in response.url:
+            item = Following()
         if data:
             for userinfo in data:
-                user_url = self.base_url + '/people/' + userinfo['url_token']  # 拼接成用户个人网址
-                item['ftoken'] = nametoken
-                item['gender'] = userinfo['gender']
-                item['name'] = userinfo['name']
-                item['nametoken'] = userinfo['url_token']
-                item['user_type'] = userinfo['user_type']
-                item['is_advertiser'] = userinfo['is_advertiser']
-                item['avatar_url'] = userinfo['avatar_url']
-                item['is_org'] = userinfo['is_org']
-                head_line = userinfo['headline']
-                item['headline'] = head_line.replace('"', "'") if head_line else 'None'
-                item['main_page_url'] = user_url
+                if isinstance(item, Following):
+                    item['follower_token'] = url_token
+                    item['following_token'] = userinfo['url_token']
+                else:
+                    item['follower_token'] = userinfo['url_token']
+                    item['following_token'] = url_token
                 yield item
-                # print(item)
-                yield scrapy.Request(url=user_url, callback=self.parse, headers=ZHIHU_HEADER, cookies=get_zhihu_cookie())
+                user_id = userinfo['url'].split('/')[-1]
+                if user_id not in db_user_ids:
+                    logging.info("%s not in ids", user_id)
+                    db_user_ids.add(user_id)
+                    json_url = self.url_user_info_api_format.format(user_id)
+                    yield scrapy.Request(url=json_url,
+                                         callback=self.parse,
+                                         headers=ZHIHU_HEADER)
 
         if paging and not paging['is_end']:
-            next_url = paging['next'].replace('http://', 'https://')
+            next_url = paging['next'].replace('https://www.zhihu.com', 'https://www.zhihu.com/api/v4')
+            print('next_url', next_url)
             yield scrapy.Request(url=next_url, callback=self.parser_follow_json, headers=ZHIHU_HEADER,
-                                 cookies=get_zhihu_cookie(), dont_filter=True, meta={
-                    'nametoken': nametoken
-                })
+                                 dont_filter=True, meta={'url_token': url_token})

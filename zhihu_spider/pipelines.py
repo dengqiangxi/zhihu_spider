@@ -2,97 +2,52 @@
 
 # Define your item pipelines here
 #
-from .misc.all_secret_set import mysql_config
+import pymongo
 import pymysql
+
+from zhihu_spider.misc.all_secret_set import mysql_config
 import logging
-from zhihu_spider.items import ZhihuSpiderItem, ZhihuFollowee,ZhihuFollower
+from zhihu_spider.misc.mysql_pool import ConnectionPool
+from zhihu_spider.items import *
 from scrapy.exceptions import DropItem
-from scrapy.pipelines.images import ImagesPipeline, FileException
-from scrapy.http import Request
+from zhihu_spider.misc.tools import spelling_insert_sql, hump2underline
 
-
-class ZhihuImagePipeLine(ImagesPipeline):
-    def get_media_requests(self, item, info):
-        # print('下载图片',item['avatar_url'])
-
-        yield Request(url=item['avatar_url'], headers={
-            "Referer": item['main_page_url'],
-            'User-Agent': "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_6) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/52.0.2743.116 Safari/537.36",
-        })
-
-    def item_completed(self, results, item, info):
-        # print(results)
-        if results and results[0] and results[0][0]:
-            item['avatar_local_url'] = results[0][1]['path']
-        # print(item)
-        return item
+item_class_list = [
+    UserInfo,
+    Business,
+    Location,
+    Topic,
+    Following,
+    Follower,
+    Employment,
+    Education,
+]
 
 
 class ZhihuSpiderPipeLine(object):
+
     def __init__(self):
-        self.connection = pymysql.connect(**mysql_config)
-        self.cursor = self.connection.cursor()
+        pool = ConnectionPool(size=20, name='pool', **mysql_config)
+        self.connections = pool.get_connection()
 
     def process_item(self, item, spider):
-        if isinstance(item, ZhihuSpiderItem):
-            self.saveOrUpdateUserInfo(item)
-        elif isinstance(item, ZhihuFollowee):
-            self.saveOrUpdateFollow(item,'followee')
-        elif isinstance(item, ZhihuFollower):
-            self.saveOrUpdateFollow(item,'follower')
+        for item_class in item_class_list:
+            if isinstance(item, item_class):
+                self.save_item(item, hump2underline(item_class.__name__))
 
-    def saveOrUpdateUserInfo(self, item):
+    def save_item(self, item, table_name):
+        sql = spelling_insert_sql(item.keys(), table_name)
         try:
-            nametoken = item['nametoken']
-            avatar_local_url = item['avatar_local_url'] if 'avatar_local_url' in item else '-'
-            sql_select_id = 'SELECT nametoken FROM zh_userinfo WHERE nametoken="' + nametoken + '"'
-            sql_insert_content = 'INSERT INTO zh_userinfo (nametoken, name, followees, followers,headline, detail_introduce, major, ask, answer, articles, avatar_url, main_page_url,avatar_local_url) VALUES("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s","%s")' \
-                                 % (
-                                     nametoken, item['name'], item['followees'], item['followers'], item['headline'],
-                                     item['detail_introduce'], item['major'], item['ask'], item['answer'],
-                                     item['articles'],
-                                     item['avatar_url'], item['main_page_url'],avatar_local_url)
-            sql_update_content = 'UPDATE zh_userinfo SET followees="%s",followers="%s",detail_introduce="%s",major="%s",ask="%s",answer="%s",articles="%s" WHERE nametoken="%s"' % (
-                item['followees'], item['followers'],
-                item['detail_introduce'], item['major'], item['ask'], item['answer'],
-                item['articles'], nametoken
-            )
-            self.cursor.execute(sql_select_id)
-            if not self.cursor.fetchone():
-                self.cursor.execute(sql_insert_content)
-            else:
-                self.cursor.execute(sql_update_content)
-            self.connection.commit()
-            return item
+            with self.connections.cursor() as cursor:
+                cursor.execute(sql, dict(item))
+        except pymysql.err.MySQLError as e:
+            logging.error(e)
+            logging.warning("error item %s", item.__class__.__name__)
+            self.connections.ping(reconnect=True)
+            self.connections.rollback()
         except Exception as e:
             logging.error(e)
-            self.connection.rollback()
-            raise DropItem('重复喽')
+            raise DropItem('item exception', sql)
 
-    def saveOrUpdateFollow(self, item,dbname):
-        try:
-            ftoken = item['ftoken']
-            nametoken = item['nametoken']
-            sql_selector_user = 'SELECT nametoken FROM zh_userinfo WHERE nametoken="%s"' % (nametoken)
-
-            is_advertiser = 1 if item['is_advertiser'] else 0
-            is_org = 1 if item['is_org'] else 0
-
-            sql_insert_user = 'INSERT INTO zh_userinfo (nametoken, name, gender, avatar_url, main_page_url,headline,is_advertiser,user_type,is_org) VALUES ("%s","%s","%s","%s","%s","%s","%s","%s","%s") ' % (
-                nametoken, item['name'], item['gender'], item['avatar_url'], item['main_page_url'],item['headline'],is_advertiser,item['user_type'],is_org)
-            self.cursor.execute(sql_selector_user)
-            if not self.cursor.fetchall():
-                self.cursor.execute(sql_insert_user)
-            sql_select_fid = 'SELECT * FROM zh_%s WHERE usertoken="%s" AND %stoken="%s"' % (dbname,ftoken,dbname, nametoken)
-            sql_insert_friends = 'INSERT INTO zh_%s (usertoken, %stoken,%sname) VALUES ("%s","%s","%s")' % (dbname,dbname,dbname,ftoken, nametoken,item['name'])
-            self.cursor.execute(sql_select_fid)
-            p = self.cursor.fetchall()
-            if not p:
-                print('sql_insert_friends',sql_insert_friends)
-                self.cursor.execute(sql_insert_friends)
-            self.connection.commit()
-            return item
-        except Exception as e:
-            logging.error(e)
-            self.connection.rollback()
-            raise DropItem('重复喽')
+    def close_spider(self, spider):
+        self.connections.close()

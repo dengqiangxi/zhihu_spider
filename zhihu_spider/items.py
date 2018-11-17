@@ -3,53 +3,136 @@
 # Define here the models for your scraped items
 #
 # See documentation in:
-# http://doc.scrapy.org/en/latest/topics/items.html
+# http://doc.org/en/latest/topics/items.html
 
-import scrapy
-
-
-class ZhihuSpiderItem(scrapy.Item):
-    name = scrapy.Field()  # 用户名
-    gender = scrapy.Field()  # 用户性别
-    followees = scrapy.Field()  # 用户粉丝
-    followers = scrapy.Field()  # 用户关注的人
-    headline = scrapy.Field()  # 简介
-    detail_introduce = scrapy.Field()  # 用户详细介绍
-    location = scrapy.Field()  # 住址
-    major = scrapy.Field()  # 主修
-    ask = scrapy.Field()  # 提问
-    answer = scrapy.Field()  # 回答
-    articles = scrapy.Field()  # 文章
-    avatar_url = scrapy.Field()  # 头像url
-    main_page_url = scrapy.Field()  # 主页
-    avatar_local_url = scrapy.Field()  # 本机位置
-    nametoken = scrapy.Field()
-    images = scrapy.Field()
+from scrapy import Field, Item
+from scrapy.loader import ItemLoader
+from scrapy.loader.processors import TakeFirst
 
 
-class ZhihuFollowee(scrapy.Item):
-    ftoken = scrapy.Field() #表示谁关注的
-    gender = scrapy.Field()  # 性别
-    name = scrapy.Field()  # 用户名
-    nametoken = scrapy.Field()  # 用户地址末段链接
-    user_type = scrapy.Field()  # 用户类型
-    is_advertiser = scrapy.Field()  # 是否是广告者
-    avatar_url = scrapy.Field()  # 用户头像url
-    is_org = scrapy.Field() #是否是组织
-    headline = scrapy.Field() # 简介
-    avatar_local_url = scrapy.Field()  # 本机位置
-    main_page_url=scrapy.Field() # 主页URL
+class UserInfo(Item):
+    education = Field()
+    following_count = Field()
+    vote_from_count = Field()
+    user_type = Field()
+    included_text = Field()
+    pins_count = Field()
+    is_privacy_protected = Field()
+    included_articles_count = Field()
+    is_force_renamed = Field()
+    id = Field()
+    favorite_count = Field()
+    voteup_count = Field()
+    commercial_question_count = Field()
+    is_blocking = Field()
+    following_columns_count = Field()
+    headline = Field()
+    url_token = Field()
+    participated_live_count = Field()
+    is_advertiser = Field()
+    following_favlists_count = Field()
+    favorited_count = Field()
+    is_org = Field()
+    follower_count = Field()
+    employment = Field()
+    type = Field()
+    avatar_hue = Field()
+    avatar_url_template = Field()
+    following_topiceducation_count = Field()
+    description = Field()
+    business = Field()
+    avatar_url = Field()
+    columns_count = Field()
+    hosted_live_count = Field()
+    is_active = Field()
+    thank_to_count = Field()
+    mutual_followees_count = Field()
+    cover_url = Field()
+    thank_from_count = Field()
+    vote_to_count = Field()
+    is_blocked = Field()
+    answer_count = Field()
+    allow_message = Field()
+    articles_count = Field()
+    name = Field()
+    question_count = Field()
+    location = Field()
+    badge = Field()
+    included_answers_count = Field()
+    url = Field()
+    logs_count = Field()
+    following_question_count = Field()
+    thanked_count = Field()
+    gender = Field()
+
+    sina_weibo_url = Field()
+    sina_weibo_name = Field()
+    marked_answers_text = Field()
+
+    shared_count = Field()
+    lite_favorite_content_count = Field()
+    independent_articles_count = Field()
+    reactions_count = Field()
+    is_activity_blocked = Field()
+    is_bind_sina = Field()
+    is_hanged = Field()
+    is_unicom_free = Field()
+    live_count = Field()
+    is_baned = Field()
+    is_enable_signalment = Field()
+    is_enable_watermark = Field()
+    infinity = Field()
 
 
-class ZhihuFollower(scrapy.Item):
-    ftoken = scrapy.Field() #表示谁关注的
-    gender = scrapy.Field()  # 性别
-    name = scrapy.Field()  # 用户名
-    nametoken = scrapy.Field()  # 用户地址末段链接
-    user_type = scrapy.Field()  # 用户类型
-    is_advertiser = scrapy.Field()  # 是否是广告者
-    avatar_url = scrapy.Field()  # 用户头像url
-    is_org = scrapy.Field() #是否是组织
-    headline = scrapy.Field() # 简介
-    avatar_local_url = scrapy.Field()  # 本机位置
-    main_page_url=scrapy.Field() # 主页URL
+class Base(Item):
+    url = Field()
+    avatar_url = Field()
+    name = Field()
+    introduction = Field()
+    type = Field()
+    excerpt = Field()
+    id = Field()
+    meta = Field()
+
+
+class Business(Base):
+    experience = Field()
+    pass
+
+
+class Location(Base):
+    pass
+
+
+class Topic(Base):
+    pass
+
+
+class Education(Base):
+    pass
+
+
+class Employment(Base):
+    pass
+
+
+class Following(Item):
+    follower_token = Field()
+    following_token = Field()
+
+
+#    is_vip 需要转换
+
+
+class Follower(Item):
+    follower_token = Field()
+    following_token = Field()
+
+
+class RawDataItem(Item):
+    json_obj = Field()
+
+
+class TestLoader(ItemLoader):
+    default_item_class = UserInfo
+    default_input_processor = TakeFirst()

@@ -1,5 +1,9 @@
+#!/usr/bin/env python
+# -*- coding=utf8 -*-
+# Created by dengqiangxi at 2018/11/5
 import pymysql
 
+# 数据库相关配置
 mysql_config = {
     'host': '127.0.0.1',
     'port': 3306,
@@ -8,16 +12,5 @@ mysql_config = {
     'db': 'zhihu',
     'charset': 'utf8',
     'cursorclass': pymysql.cursors.DictCursor,
+    'autocommit': True
 }
-cookies = {}
-
-def get_zhihu_cookie():
-    if cookies:
-        return cookies
-    f = open("cookie", "rb")
-    cookie = f.read().decode("utf-8")
-    f.close()
-    for i in cookie.split(";"):
-        line = i.replace('"', '').split("=", 1)
-        cookies[line[0]] = line[1]
-    return cookies
