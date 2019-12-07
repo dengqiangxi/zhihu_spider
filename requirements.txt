@@ -10,7 +10,7 @@ idna==2.7
 incremental==17.5.0
 lxml==4.2.5
 parsel==1.5.0
-Pillow==5.3.0
+Pillow==6.2.1
 pyasn1==0.4.4
 pyasn1-modules==0.2.2
 pycparser==2.19
@@ -22,7 +22,7 @@ queuelib==1.5.0
 Scrapy==1.5.0
 service-identity==17.0.0
 six==1.11.0
-Twisted==18.7.0
+Twisted==19.10.0
 user-agent==0.1.9
 w3lib==1.19.0
 zope.interface==4.5.0
